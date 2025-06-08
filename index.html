@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Backrooms Experiment</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <style>
+        /* --- 基本樣式 --- */
+        body {
+            margin: 0;
+            overflow: hidden;
+            /* 使用 CSS 漸層和圖案模擬 Backrooms 背景 */
+            background-color: #a89f85; /* 基礎米黃色 */
+            /* 疊加層：模擬牆紙圖案 (菱形) */
+            background-image:
+                /* 1. 細微噪點 (放在最上層) */
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E"),
+                /* 2. 模擬牆紙菱形圖案 (用線性漸層組合) */
+                repeating-linear-gradient(
+                    45deg,
+                    rgba(140, 130, 100, 0.1) 0,
+                    rgba(140, 130, 100, 0.1) 1px, /* 細線條 */
+                    transparent 1px,
+                    transparent 10px /* 控制菱形大小 */
+                ),
+                repeating-linear-gradient(
+                    -45deg,
+                    rgba(140, 130, 100, 0.1) 0,
+                    rgba(140, 130, 100, 0.1) 1px,
+                    transparent 1px,
+                    transparent 10px
+                ),
+                /* 3. 模擬光照不均和陰影 (徑向漸層，中心亮，邊緣暗) */
+                radial-gradient(
+                    ellipse at center,
+                    rgba(220, 210, 180, 0.3) 0%, /* 中心微亮 */
+                    rgba(168, 159, 133, 0.1) 40%, /* 中間色 */
+                    rgba(80, 75, 60, 0.6) 100%  /* 邊緣暗化 */
+                );
+            background-size: 100px 100px, 10px 10px, 10px 10px, cover; /* 對應每個背景層 */
+            background-blend-mode: overlay, multiply, multiply, normal; /* 混合模式 */
+
+            color: #d8d0b8; /* 恢復之前偏暖的文字顏色 */
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+        }
+        canvas {
+            display: block;
+        }
+
+        /* --- Blocker 畫面 - 這次讓它幾乎透明，主要靠 body 背景 --- */
+        #blocker {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(40, 35, 25, 0.2); /* 非常淡的棕色疊加，增加一點點對比 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        /* --- Instructions 提示框樣式 - 暖色調 --- */
+        #instructions {
+            width: 90%;
+            max-width: 480px;
+            padding: 30px 35px;
+            background-color: rgba(45, 40, 30, 0.9); /* 深棕色半透明背景 */
+            border: 1px solid #807560; /* 棕色邊框 */
+            border-radius: 3px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5), /* 更強的外部陰影 */
+                        inset 0 0 6px rgba(0, 0, 0, 0.5); /* 內陰影 */
+            color: #c8c0a8; /* 提示框內文字顏色 */
+        }
+        #instructions h2 {
+            margin-top: 0;
+            margin-bottom: 25px;
+            color: #e8e0c8; /* 更亮的米黃色標題 */
+            font-size: 1.6em;
+            text-shadow: 0 0 6px rgba(230, 220, 190, 0.3); /* 黃色調文字發光 */
+            letter-spacing: 1px;
+        }
+        #instructions p {
+            line-height: 1.7;
+            margin-bottom: 12px;
+        }
+         #instructions p strong {
+             color: #e0d8c0; /* 按鍵提示用更亮的顏色 */
+             font-weight: normal;
+         }
+        #instructions p:last-of-type {
+             margin-bottom: 30px;
+        }
+
+        /* --- 按鈕樣式 - 暖色調 --- */
+        #instructions button {
+            padding: 11px 28px;
+            font-size: 1em;
+            font-family: inherit;
+            color: #e0d8c0;
+            background-color: #5a5040; /* 棕灰色 */
+            border: 1px solid #887d6b;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+        }
+        #instructions button:hover {
+            background-color: #6a6050;
+            border-color: #a09580;
+            color: #ffffff;
+        }
+         #instructions button:active {
+            background-color: #4a4030;
+        }
+
+
+        /* --- 觸控按鈕樣式 (暖色調) --- */
+        .touch-controls {
+            position: fixed;
+            bottom: 25px;
+            left: 25px;
+            display: none;
+            z-index: 10;
+            opacity: 0.7;
+        }
+        .touch-controls button {
+            width: 55px;
+            height: 55px;
+            margin: 4px;
+            border-radius: 50%; /* 恢復圓形 */
+            border: 2px solid rgba(180, 170, 140, 0.7); /* 黃灰邊框 */
+            background-color: rgba(80, 70, 55, 0.5); /* 棕色半透明背景 */
+            color: rgba(220, 210, 180, 0.8); /* 米黃文字 */
+            font-size: 18px;
+            font-weight: bold;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+        .touch-controls button:active {
+             background-color: rgba(110, 100, 80, 0.7);
+             border-color: rgba(220, 210, 180, 0.9);
+         }
+        .touch-controls-left {
+            position: relative;
+            width: 55px;
+            height: 175px;
+        }
+        #button-w { position: absolute; top: 0; left: 0; }
+        #button-a { position: absolute; bottom: 0px; left: -63px; }
+        #button-s { position: absolute; bottom: 0px; left: 0px; }
+        #button-d { position: absolute; bottom: 0px; left: 63px; }
+
+    </style>
+</head>
+<body>
+    <div id="blocker">
+        <div id="instructions">
+            <h2>Backrooms Experiment</h2>
+            <p>Click screen to begin exploration</p>
+            <p>
+                Move: [<strong>W</strong>] [<strong>A</strong>] [<strong>S</strong>] [<strong>D</strong>]<br/>
+                Look: [<strong>Mouse</strong>]<br/>
+                Exit Lock: [<strong>ESC</strong>]
+            </p>
+            <button id="startButton">Begin</button>
+        </div>
+    </div>
+
+    <div id="touchControls" class="touch-controls">
+       <div class="touch-controls-left">
+            <button id="button-w" aria-label="Forward">W</button>
+            <button id="button-a" aria-label="Left">A</button>
+            <button id="button-s" aria-label="Backward">S</button>
+            <button id="button-d" aria-label="Right">D</button>
+       </div>
+    </div>
+
+    <!-- Import Map: 使用 CDN (保持不變) -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <!-- 主程式碼 (保持不變) -->
+    <script type="module" src="main.js"></script>
+
+</body>
+</html>
